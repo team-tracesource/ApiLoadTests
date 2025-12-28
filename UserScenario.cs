@@ -142,16 +142,48 @@ public class UserScenario(
             await Task.Delay(_random.Next(100, 300), ct);
         }
 
-        // Step 5: Read Forms (list)
-        await apiClient.GetFormsAsync(ct);
+        // Step 5: Parallel batch - Organization calls (5x), Forms list calls (6x)
+        var parallelTasks = new List<Task>();
+
+        // Organization endpoint calls (5 times)
+        if (!string.IsNullOrEmpty(testUser.OrganizationId))
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                parallelTasks.Add(apiClient.GetOrganizationAsync(testUser.OrganizationId, ct));
+            }
+        }
+
+        // All forms endpoint calls (6 times)
+        for (int i = 0; i < 6; i++)
+        {
+            parallelTasks.Add(apiClient.GetFormsAsync(ct));
+        }
+
+        // Execute organization and forms list calls in parallel
+        await Task.WhenAll(parallelTasks);
         await Task.Delay(_random.Next(50, 150), ct);
 
-        // Step 6: Read individual forms
-        foreach (var formId in createdFormIds.Take(2))
+        // Step 6: Form details calls (6 times) - parallelize if we have enough forms
+        var formDetailTasks = new List<Task>();
+        for (int i = 0; i < 6; i++)
         {
-            await apiClient.GetFormAsync(formId, ct);
-            await Task.Delay(_random.Next(50, 150), ct);
+            // Cycle through created form IDs
+            var formId = createdFormIds.Count > 0 
+                ? createdFormIds[i % createdFormIds.Count] 
+                : null;
+            
+            if (!string.IsNullOrEmpty(formId))
+            {
+                formDetailTasks.Add(apiClient.GetFormAsync(formId, ct));
+            }
         }
+
+        if (formDetailTasks.Count > 0)
+        {
+            await Task.WhenAll(formDetailTasks);
+        }
+        await Task.Delay(_random.Next(50, 150), ct);
 
         // Step 7: Get form stats
         await apiClient.GetFormStatsAsync(ct);

@@ -262,6 +262,34 @@ public class PhaseMetrics
 
     public void AddRequest(RequestMetric metric) => _requests.Add(metric);
 
+    /// <summary>
+    /// Normalizes endpoints with IDs to a template form for grouping.
+    /// e.g., "/api/v1/forms/abc123" becomes "/api/v1/forms/{id}"
+    /// </summary>
+    private static string NormalizeEndpoint(string endpoint)
+    {
+        // Pattern: /api/v1/forms/{id} - match UUID or MongoDB ObjectId patterns
+        var patterns = new (string pattern, string replacement)[]
+        {
+            (@"/api/v1/forms/[a-fA-F0-9]{24}$", "/api/v1/forms/{id}"),
+            (@"/api/v1/forms/[a-fA-F0-9-]{36}$", "/api/v1/forms/{id}"),
+            (@"/api/v1/forms/[a-zA-Z0-9]+$", "/api/v1/forms/{id}"),
+            (@"/api/v1/organizations/[a-fA-F0-9]{24}$", "/api/v1/organizations/{id}"),
+            (@"/api/v1/organizations/[a-fA-F0-9-]{36}$", "/api/v1/organizations/{id}"),
+            (@"/api/v1/organizations/[a-zA-Z0-9]+$", "/api/v1/organizations/{id}"),
+        };
+
+        foreach (var (pattern, replacement) in patterns)
+        {
+            if (System.Text.RegularExpressions.Regex.IsMatch(endpoint, pattern))
+            {
+                return replacement;
+            }
+        }
+
+        return endpoint;
+    }
+
     public int TotalRequests => _requests.Count;
     public int SuccessfulRequests => _requests.Count(r => r.IsSuccess);
     public int FailedRequests => _requests.Count(r => !r.IsSuccess);
@@ -292,7 +320,7 @@ public class PhaseMetrics
     public Dictionary<string, EndpointMetrics> GetEndpointBreakdown()
     {
         return _requests
-            .GroupBy(r => $"{r.Method} {r.Endpoint}")
+            .GroupBy(r => $"{r.Method} {NormalizeEndpoint(r.Endpoint)}")
             .ToDictionary(
                 g => g.Key,
                 g => new EndpointMetrics

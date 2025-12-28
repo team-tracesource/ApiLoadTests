@@ -116,6 +116,14 @@ public class ApiClient : IDisposable
         return await ExecuteRequestAsync<object>("GET", "/api/v1/forms/stats", null, ct);
     }
 
+    public async Task<(object? Response, bool IsSuccess, string? Error)> GetOrganizationAsync(
+        string organizationId,
+        CancellationToken ct = default
+    )
+    {
+        return await ExecuteRequestAsync<object>("GET", $"/api/v1/organizations/{organizationId}", null, ct);
+    }
+
     private async Task<(T? Response, bool IsSuccess, string? Error)> ExecuteRequestAsync<T>(
         string method,
         string endpoint,
