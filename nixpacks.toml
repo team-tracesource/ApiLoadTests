@@ -1,0 +1,16 @@
+﻿[phases.setup]
+nixpkgsArchive = '21808d22b1cda1898b71cf1a1beb524a97add2c4'
+nixPkgs = ["dotnet-sdk_9", "curl", "wget"]
+
+[phases.install]
+commands = [
+    "dotnet restore"  # Restore .NET dependencies
+]
+
+[phases.build]
+commands = [
+    "dotnet publish --no-restore -c Release -o out"  # Build .NET app
+]
+
+[start]
+command = "cd out && dotnet TraceSource.LoadTests.dll --urls=http://0.0.0.0:3000" # Start app
