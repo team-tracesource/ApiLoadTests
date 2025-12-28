@@ -1,0 +1,10 @@
+# Load test output files
+*.md
+!README.md
+
+# Build outputs
+bin/
+obj/
+
+# Environment files with secrets
+.env
